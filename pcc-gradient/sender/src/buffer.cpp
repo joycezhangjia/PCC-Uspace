@@ -41,6 +41,11 @@ written by
 #include <cstring>
 #include <cmath>
 #include "buffer.h"
+//jia
+#include<stdio.h>
+#include<stdlib.h>
+#include<time.h>
+#define random(x) (rand()%x)
 
 using namespace std;
 
@@ -78,9 +83,10 @@ CSndBuffer::CSndBuffer(const int& size, const int& mss):
 	}
 	pb->m_pNext = m_pBlock;
 	pb->m_iBufferNo = bufferNo;
-	blockEnder = pb;
+	//blockEnder = pb;
 
 	pb = m_pBlock;
+	blockHeader = m_pBlock;
 	char* pc = m_pBuffer->m_pcData;
 	for (int i = 0; i < m_iSize; ++ i)
 	{
@@ -92,6 +98,23 @@ CSndBuffer::CSndBuffer(const int& size, const int& mss):
 	m_pFirstBlock = m_pCurrBlock = m_pLastBlock = m_pBlock;
 	FirstBuffer = m_pBuffer;
 	FirstBlock = 0;
+
+	//jia
+	s_lowest = new S_Block;
+	s_lowest ->enq_time = 0;
+	s_lowest ->offset = 0;
+	s_lowest ->sens = -1;
+	s_lowest ->s_next = s_lowest;
+    s_highest = s_lowest;
+	
+	S_length = 0;
+	S_offset = 0;
+	S_first = 0;
+	S_leftover = 0;
+    
+	s_waitforackhead = new S_Block;
+	s_waitforackhead ->s_next = s_waitforackhead;
+	s_waitforacktail = s_waitforackhead;
 /*	Block *test = m_pBlock;
 	do {
 		cout << "initial " << test->m_iBufferNo << " " << test << endl;
@@ -124,6 +147,26 @@ CSndBuffer::~CSndBuffer()
 		delete temp;
 	}
 	delete [] m_pBuffer->m_pcData;
+
+	//jia
+	S_Block* sb = s_highest;
+	while (sb != s_lowest)
+	{
+		S_Block* temp = sb;
+		sb = sb->s_next;
+		delete temp;
+	}
+	delete s_lowest;
+	
+	sb = s_waitforackhead;
+	while (sb != s_waitforacktail)
+	{
+		S_Block* temp = sb;
+		sb = sb->s_next;
+		delete temp;
+	}
+	delete s_waitforacktail;
+    delete sb;
 
 #ifndef WIN32
 pthread_mutex_destroy(&m_BufLock);
@@ -211,6 +254,13 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 {
 //cout <<"ADD BUFFER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	CGuard bufferguard(m_BufLock);
+	//jia
+	bool flag = false;
+	if (m_pCurrBlock == m_pLastBlock)
+	{
+		flag = true;
+	}
+
 	int size = len / m_iMSS;
 	if ((len % m_iMSS) != 0)
 		size ++;
@@ -248,6 +298,69 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 	m_pLastBlock = s;
 
 	m_iCount += size;
+
+	for(int i=0; i<size; ++i)
+	{
+		//cout<<"I'm in add, size= "<<size<<endl;
+		srand((int)time);
+        double sens = double(random(100));
+		cout<<sens<<endl;
+		//double sens = 100;
+	    if (flag)
+        {
+	        s_lowest->sens = sens;
+	    	s_lowest->enq_time = time;
+	    	s_lowest->offset = 0;
+			s_lowest->s_next = s_lowest;
+	    	S_length = 1;
+			S_offset = 1;
+			s_highest = s_lowest;
+			cout<<"flag"<<endl;
+    	}
+		else
+    	{
+        	S_Block* temp = new S_Block;
+        	temp->sens = sens;
+	        temp->offset = S_offset;
+    	    temp->enq_time = time;
+        	S_length ++;
+			S_offset ++;
+			
+
+        
+        	//sort
+	        if (sens >= s_highest->sens)
+    	    {
+        	    temp->s_next = s_highest;
+            	s_highest = temp;
+				cout<<"highest offset "<<s_highest->offset<<endl;
+				cout<<"highest next offset "<<s_highest->s_next->offset<<endl;
+	        }
+    	    else if (sens <= s_lowest->sens)
+        	{
+            	s_lowest->s_next = temp;
+	            s_lowest = temp;
+    	    }
+        	else
+        	{
+            	S_Block* current = s_highest;   //modified (highest or lowest)
+	            while (current != s_lowest)
+    	        {
+        	        if (current->sens >= sens && current->s_next->sens <= sens)
+            	    {
+                	    temp->s_next = current->s_next;
+                    	current->s_next = temp;
+	                    break;
+    	            }
+					current = current->s_next;
+            	}
+	        }
+		}
+		flag = false;
+        //cout<<"add "<<S_length << " " <<time<<"   "<< m_iCount<<endl;
+	}
+
+	cout<<"add "<<m_iCount<<endl;
 
 /*	m_iNextMsgNo ++;
 	if (m_iNextMsgNo == CMsgNo::m_iMaxMsgNo)
@@ -299,13 +412,54 @@ int CSndBuffer::readData(char** data, int32_t& msgno)
 	CGuard bufferguard(m_BufLock);
 	if (m_pCurrBlock == m_pLastBlock)
 		return 0;
+    cout<<"curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
 
-	*data = m_pCurrBlock->m_pcData;
+	int offset = s_highest->offset;   //future:change m_pCurrBlock
+	cout<<"send packet offset "<<offset<<" sensitivity "<<s_highest->sens<<endl;
+	//cout<<"curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
+
+	/**data = m_pCurrBlock->m_pcData;
 	int readlen = m_pCurrBlock->m_iLength;
 	msgno = m_pCurrBlock->m_iMsgNo;
 
-	m_pCurrBlock = m_pCurrBlock->m_pNext;
+	cout<<readlen<<"       "<<msgno<<endl;
 
+	m_pCurrBlock = m_pCurrBlock->m_pNext;
+    cout<<"send packet"<<endl;
+	cout<<"after curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;*/
+
+	Block* pb = blockHeader;
+
+
+    for(int i=0;i<offset;i++)
+	{
+        pb = pb->m_pNext;
+		//cout<<"I'm in read"<<endl;
+	}
+
+	
+	*data = pb->m_pcData;
+	int readlen = pb->m_iLength;
+	msgno = pb->m_iMsgNo;
+
+	//cout<<readlen<<"       "<<msgno<<endl;
+
+	m_pCurrBlock = m_pCurrBlock->m_pNext;
+    //cout<<"send packet"<<endl;
+	cout<<"after curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
+
+
+	s_waitforacktail->s_next = s_highest;
+	s_waitforacktail = s_highest;
+	S_Block* temp = new S_Block;
+	temp = s_highest->s_next;
+	s_highest = temp;
+	s_waitforacktail ->s_next = s_waitforacktail;
+	
+    S_length --;
+	
+
+	cout<<"read "<<m_iCount<<endl;
 	return readlen;
 }
 
@@ -357,22 +511,44 @@ int CSndBuffer::readData(char** data, const int offset, int32_t& msgno, int& msg
 	*data = p->m_pcData;
 	int readlen = p->m_iLength;
 	msgno = p->m_iMsgNo;
-
+        cout<<"send retransmit packet "<<endl;
 	return readlen;
 }
 
 void CSndBuffer::ackData(const int& offset)
 {
 	CGuard bufferguard(m_BufLock);
+	cout<<"offset1   "<<offset<<endl;
 
-/*	Block* tmp = m_pFirstBlock, *tmp1 = m_pFirstBlock;
-	for (int i = 0; i < offset; ++ i)
-		tmp = tmp->m_pNext;*/
+	//cout<<"ack offset "<<offset<<endl;
+    
+	S_Block* sb = s_waitforackhead;
+	for(int i=0;i<offset;i++)
+	{
+		/*int s_offset = sb->offset;   //future:change m_pCurrBlock
+
+	    Block* pb = blockHeader;
+
+        for(int j=0;j<s_offset;j++)
+		{
+        	pb = pb->m_pNext;
+		}*/
+		//cout<<"I'm in ack"<<endl;
+		
+		sb = sb->s_next;
+	}
+	s_waitforackhead = sb;
+    
+
+    cout<<"offset2   "<<offset<<endl;
+	m_iCount -= offset;
+	//cout<<"ack "<<S_length << " " << m_iCount<<endl;
+	cout<<"ack "<<m_iCount<<endl;
+
+	CTimer::triggerEvent();
 
 
-	//   for (int i = 0; i < offset; ++ i)
-	//      m_pFirstBlock = m_pFirstBlock->m_pNext;
-	int movement = (FirstBlock+offset)/m_pBuffer->m_iSize;
+	/*int movement = (FirstBlock+offset)/m_pBuffer->m_iSize;
 //	cout << "first buffer " << FirstBuffer << " " << FirstBuffer->first_block << endl;
 	for (int i=0; i<movement; ++i) {
 		FirstBuffer = FirstBuffer->m_pNext;
@@ -392,7 +568,7 @@ void CSndBuffer::ackData(const int& offset)
 	for (int i=0; i<blockOffset; ++i)
 	{
 		m_pFirstBlock = m_pFirstBlock->m_pNext;
-	}
+	}*/
 
 /*if (m_pFirstBlock == tmp)
 	cout << "correct ack\n";
@@ -409,6 +585,8 @@ else {
 }*/
 
 	m_iCount -= offset;
+
+	cout<<"ack data "<<offset<<" count "<<m_iCount<<endl;
 
 	CTimer::triggerEvent();
 }

@@ -1,25 +1,20 @@
 /*****************************************************************************
 Copyright (c) 2001 - 2011, The Board of Trustees of the University of Illinois.
 All rights reserved.
-
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are
 met:
-
  * Redistributions of source code must retain the above
   copyright notice, this list of conditions and the
   following disclaimer.
-
  * Redistributions in binary form must reproduce the
   above copyright notice, this list of conditions
   and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
-
  * Neither the name of the University of Illinois
   nor the names of its contributors may be used to
   endorse or promote products derived from this
   software without specific prior written permission.
-
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
 IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -2555,6 +2550,7 @@ void CUDT::resizeMSS(int mss) {
 int CUDT::packData(CPacket& packet, uint64_t& ts)
 {
 
+	
 	int payload = 0;
 	bool probe = false;
 	uint64_t entertime;
@@ -2569,18 +2565,25 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
 	// Loss retransmission always has higher priority.
 	if ((packet.m_iSeqNo = m_pSndLossList->getLostSeq()) >= 0)
 	{
+		cout<<"now loss"<<endl;
 		// protect m_iSndLastDataAck from updating by ACK processing
 		CGuard ackguard(m_AckLock);
 
 
 		int offset = CSeqNo::seqoff((int32_t&)m_iSndLastDataAck, packet.m_iSeqNo);
 		if (offset < 0)
+		{
+			cout<<"here me "<<offset<<endl;
 			return 0;
+		}
+		cout<<"here me "<<(int32_t&)m_iSndLastDataAck<<"    "<<packet.m_iSeqNo<<endl;
 //		cout<<"pack loss"<<offset<<endl;
 		int msglen;
 		//struct timeval begin,end;
 		//gettimeofday(&begin,NULL);
+		cout<<"now sned"<<endl;
 		payload = m_pSndBuffer->readData(&(packet.m_pcData), offset, packet.m_iMsgNo, msglen);
+		cout<<"sned finished"<<endl;
 		//gettimeofday(&end,NULL);
 		//cerr<<end.tv_usec-begin.tv_usec<<endl;
 		//  cout<<packet.m_iMsgNo<<endl;
@@ -2642,6 +2645,8 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
 			gettimeofday(&begin, NULL);
 			if (0 != (payload = m_pSndBuffer->readData(&(packet.m_pcData), packet.m_iMsgNo)))
 			{
+				
+
         if (monitor_ttl==0){
                 start_monitor(100000);}
 				m_iSndCurrSeqNo = CSeqNo::incseq(m_iSndCurrSeqNo);
@@ -2650,6 +2655,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
                                 //cout<<m_iSndCurrSeqNo<<endl;
 				m_iMonitorCurrSeqNo++;
 				packet.m_iSeqNo = m_iSndCurrSeqNo;
+				cout<<"send packet "<<packet.m_iSeqNo<<endl;
 //				cout<<"m_iSndCurrSeqNo"<<m_iSndCurrSeqNo<<endl;
 				// every 16 (0xF) packets, a packet pair is sent
 				if (0 == (packet.m_iSeqNo & 0xF))
@@ -2680,6 +2686,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
 			}
 			else
 			{
+				cout<<"TTL "<<monitor_ttl<<endl;
 #ifndef EXPERIMENTAL_FEATURE_CONTINOUS_SEND
 if(m_iSndLastAck<=m_iSndCurrSeqNo)
 m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), const_cast<int32_t&>(m_iSndCurrSeqNo));
@@ -2692,6 +2699,7 @@ m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), const_cast<int32_t&>
 //fourth step: do the timing control right, don't let packData wait for a very long time
 				//int msglen;
 				if(!loss_record1.empty()){
+					
 //					pthread_mutex_lock(&m_LossrecordLock);
 //					itr_loss_record1 = loss_record1.begin();
 //					itr_loss_record2 = loss_record2.begin();
@@ -2719,8 +2727,9 @@ m_pSndLossList->insert(const_cast<int32_t&>(m_iSndLastAck), const_cast<int32_t&>
 
 				}
 				else{
+					cout<<"i'm here"<<endl;
                                                 m_pSndLossList->insert(const_cast<int32_t&>(m_iSndCurrSeqNo), const_cast<int32_t&>(m_iSndCurrSeqNo));
-//                                      cout<<"inserting tail2 "<<m_pSndLossList->getLostSeq()<<endl;
+                                      //cout<<"inserting tail2 "<<m_pSndLossList->getLostSeq()<<endl;
                                      }
 /*		if (m_ullTimeDiff >= m_ullInterval)
 		{
@@ -3197,6 +3206,7 @@ void CUDT::start_monitor(int length)
 	//	if (monitor_ttl>0)
 	//		end_monitor(false);
 	monitor_ttl = length;
+	//monitor_ttl = 10;   //jia
 	left[current_monitor]=0;
     rtt_count[current_monitor]=0;
     rtt_value[current_monitor]=0;

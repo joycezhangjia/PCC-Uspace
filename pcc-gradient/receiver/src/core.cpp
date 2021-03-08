@@ -2314,6 +2314,7 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
    // Loss retransmission always has higher priority.
    if ((packet.m_iSeqNo = m_pSndLossList->getLostSeq()) >= 0)
    {
+      cout<<"Find lost: "<<packet.m_iSeqNo<<endl;
       // protect m_iSndLastDataAck from updating by ACK processing
       CGuard ackguard(m_AckLock);
 

@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
       CreateThread(NULL, 0, monitor, &client, 0, NULL);
    #endif
 
-   for (int i = 0; i < 1000000; i ++)
+   for (int i = 0; i < 100000; i ++)
    {
       int ssize = 0;
       int ss;
@@ -169,7 +169,11 @@ int main(int argc, char* argv[])
 
          ssize += ss;
       }
-
+      #ifndef WIN32
+          usleep(500000);
+      #else
+          Sleep(500);
+      #endif
       if (ssize < size)
          break;
    }

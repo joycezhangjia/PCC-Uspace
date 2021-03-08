@@ -135,7 +135,8 @@ private:
       int m_iTTL;                       // time to live (milliseconds)
 
       Block* m_pNext;                   // next block
-   } *m_pBlock, *m_pFirstBlock, *m_pCurrBlock, *m_pLastBlock, *blockEnder;
+   } *m_pBlock, *m_pFirstBlock, *m_pCurrBlock, *m_pLastBlock, *blockHeader; 
+  // } *m_pBlock, *m_pFirstBlock, *m_pCurrBlock, *m_pLastBlock, *blockEnder; 
 
    // m_pBlock:         The head pointer
    // m_pFirstBlock:    The first block
@@ -159,6 +160,20 @@ private:
    int m_iCount;			// number of used blocks
 
    int m_iBlockSize;
+
+    struct S_Block
+   {
+       double sens;
+       int offset;
+       uint64_t enq_time;
+       S_Block* s_next;
+
+   } *s_highest, *s_lowest, *s_waitforackhead, *s_waitforacktail;
+   int S_length;     //weighted buffer length
+   int S_offset;     //offset of the m_pCurrBlock/m_pDirstBlock
+   int S_first;
+
+   int S_leftover;     //sensitivity pack packets leftover
 
 private:
    CSndBuffer(const CSndBuffer&);
