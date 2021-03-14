@@ -47,7 +47,7 @@ written by
 #include<time.h>
 #define random(x) (rand()%x)
 
-using namespace std;
+using namespace std; 
 
 CSndBuffer::CSndBuffer(const int& size, const int& mss):
 		m_BufLock(),
@@ -104,6 +104,7 @@ CSndBuffer::CSndBuffer(const int& size, const int& mss):
 	s_lowest ->enq_time = 0;
 	s_lowest ->offset = 0;
 	s_lowest ->sens = -1;
+	s_lowest ->sens_init = -1;
 	s_lowest ->s_next = s_lowest;
     s_highest = s_lowest;
 	
@@ -299,6 +300,17 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 
 	m_iCount += size;
 
+	// Iterate and renew S
+	S_Block* current = s_highest;
+	const int delta_time = 1;
+	while(current != s_lowest)
+	{
+		int t = (time - current->enq_time) / delta_time;
+		int coefficient = pow(2, t);
+		current->sens = coefficient * current->sens_init;
+		current = current->s_next;
+	}
+
 	for(int i=0; i<size; ++i)
 	{
 		//cout<<"I'm in add, size= "<<size<<endl;
@@ -308,6 +320,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 		//double sens = 100;
 	    if (flag)
         {
+			s_lowest->sens_init = sens;
 	        s_lowest->sens = sens;
 	    	s_lowest->enq_time = time;
 	    	s_lowest->offset = 0;
@@ -320,6 +333,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 		else
     	{
         	S_Block* temp = new S_Block;
+			temp->sens_init = sens;
         	temp->sens = sens;
 	        temp->offset = S_offset;
     	    temp->enq_time = time;
