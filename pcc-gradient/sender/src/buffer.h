@@ -63,7 +63,7 @@ public:
       // Returned value:
       //    None.
 
-   void addBuffer(const char* data, const int& len, const int& ttl = -1, const bool& order = false);
+   void addBuffer(const char* data, const int& len, const int& ttl = -1, const bool& order = false, const double sens_s = -1);
 
       // Functionality:
       //    Read a block of data from file and insert it into the sending list.
@@ -164,6 +164,7 @@ private:
     struct S_Block
    {
        double sens;
+       double sens_init;
        int offset;
        uint64_t enq_time;
        S_Block* s_next;

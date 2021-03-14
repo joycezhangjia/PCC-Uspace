@@ -251,7 +251,7 @@ void CSndBuffer::resizeMSS(int newSize) {
 
 }
 
-void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, const bool& order)
+void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, const bool& order, const double sens_s)
 {
 //cout <<"ADD BUFFER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
 	CGuard bufferguard(m_BufLock);
@@ -313,11 +313,15 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 
 	for(int i=0; i<size; ++i)
 	{
+		double sens = sens_s;
 		//cout<<"I'm in add, size= "<<size<<endl;
-		srand((int)time);
-        double sens = double(random(100));
-		cout<<sens<<endl;
-		//double sens = 100;
+		if (sens_s==-1)
+		{
+			srand((int)time);
+        	sens = double(random(100));
+			cout<<sens<<endl;
+		}
+
 	    if (flag)
         {
 			s_lowest->sens_init = sens;
