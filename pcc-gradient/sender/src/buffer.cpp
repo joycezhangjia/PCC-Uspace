@@ -302,7 +302,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 
 	// Iterate and renew S
 	S_Block* current = s_highest;
-	const int delta_time = 1;
+	const double delta_time = 0.01;
 	while(current != s_lowest)
 	{
 		int t = (time - current->enq_time) / delta_time;
@@ -319,7 +319,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 		{
 			srand((int)time);
         	sens = double(random(100));
-			cout<<sens<<endl;
+			//cout<<sens<<endl;
 		}
 
 	    if (flag)
