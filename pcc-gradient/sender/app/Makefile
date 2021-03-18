@@ -8,8 +8,8 @@ ifndef arch
    arch = IA32
 endif
 
-# CCFLAGS = -Wall -D$(os) -I../src -finline-functions -O3
-CCFLAGS = -Wall -D$(os) -I../src
+CCFLAGS = -Wall -D$(os) -I../src -finline-functions -O3
+# CCFLAGS = -Wall -D$(os) -I../src
 
 ifeq ($(arch), IA32)
    CCFLAGS += -DIA32 #-mcpu=pentiumpro -march=pentiumpro -mmmx -msse
@@ -62,7 +62,7 @@ exponentiated_weights_pcc_client: exponentiated_weights_pcc_client.o
 	$(C++) $^ -o $@ $(LDFLAGS)
 
 clean:
-	rm -f *.o $(APP)
+	rm -f *.o $(APP) record.txt
 
 install:
 	export PATH=$(DIR):$$PATH

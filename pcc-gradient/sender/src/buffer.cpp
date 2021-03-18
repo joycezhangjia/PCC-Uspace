@@ -40,6 +40,7 @@ written by
 
 #include <cstring>
 #include <cmath>
+#include <fstream>
 #include "buffer.h"
 //jia
 #include<stdio.h>
@@ -302,13 +303,17 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 
 	// Iterate and renew S
 	S_Block* current = s_highest;
-	const double delta_time = 0.01;
+	const double delta_time = 100000;
+
+	cout<<"NOTICE!!!"<<s_highest<<' '<<s_lowest<<' '<<current;
+
 	while(current != s_lowest)
 	{
 		int t = (time - current->enq_time) / delta_time;
 		int coefficient = pow(2, t);
 		current->sens = coefficient * current->sens_init;
 		current = current->s_next;
+		cout<<"NOTICE!!!"<<coefficient<<' '<<t;
 	}
 
 	for(int i=0; i<size; ++i)
@@ -317,9 +322,9 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
 		//cout<<"I'm in add, size= "<<size<<endl;
 		if (sens_s==-1)
 		{
-			srand((int)time);
-        	sens = double(random(100));
-			//cout<<sens<<endl;
+			srand((double)clock());
+        	sens = double(random(2)+1);
+			cout<<sens<<endl;
 		}
 
 	    if (flag)
@@ -343,9 +348,7 @@ void CSndBuffer::addBuffer(const char* data, const int& len, const int& ttl, con
     	    temp->enq_time = time;
         	S_length ++;
 			S_offset ++;
-			
 
-        
         	//sort
 	        if (sens >= s_highest->sens)
     	    {
@@ -430,9 +433,12 @@ int CSndBuffer::readData(char** data, int32_t& msgno)
 	CGuard bufferguard(m_BufLock);
 	if (m_pCurrBlock == m_pLastBlock)
 		return 0;
+	
+	cout<<"ZYX test here."<<endl;
     cout<<"curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
 
 	int offset = s_highest->offset;   //future:change m_pCurrBlock
+
 	cout<<"send packet offset "<<offset<<" sensitivity "<<s_highest->sens<<endl;
 	//cout<<"curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
 
@@ -454,17 +460,24 @@ int CSndBuffer::readData(char** data, int32_t& msgno)
         pb = pb->m_pNext;
 		//cout<<"I'm in read"<<endl;
 	}
-
 	
 	*data = pb->m_pcData;
 	int readlen = pb->m_iLength;
 	msgno = pb->m_iMsgNo;
 
-	//cout<<readlen<<"       "<<msgno<<endl;
+	ofstream filecout("record.txt", ios_base::out | ios_base::in);
+	if(!filecout)
+    {
+        cout<<"can't open file!"<<endl;
+    }
+	filecout.seekp(0,ios_base::end);  
+	filecout<<msgno<<" "<<s_highest->sens_init<<" "<<s_highest->sens<<" "<<s_highest->enq_time<<" ";
+	filecout.close();
+
+	//cout<<msgno<<" "<<s_highest<<endl;
 
 	m_pCurrBlock = m_pCurrBlock->m_pNext;
-    //cout<<"send packet"<<endl;
-	cout<<"after curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
+	//cout<<"after curr "<<m_pCurrBlock<<" last "<<m_pLastBlock<<endl;
 
 
 	s_waitforacktail->s_next = s_highest;
@@ -477,7 +490,7 @@ int CSndBuffer::readData(char** data, int32_t& msgno)
     S_length --;
 	
 
-	cout<<"read "<<m_iCount<<endl;
+	//cout<<"read "<<m_iCount<<endl;
 	return readlen;
 }
 

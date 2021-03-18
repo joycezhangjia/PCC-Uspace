@@ -50,7 +50,8 @@ libudt.a: $(OBJS)
 
 udt:
 	cp udt.h udt
-
+	
+.PHONY: clean
 clean:
 	rm -f *.o *.so *.dylib *.a udt
 

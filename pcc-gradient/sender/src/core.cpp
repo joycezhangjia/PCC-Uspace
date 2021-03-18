@@ -2655,8 +2655,17 @@ int CUDT::packData(CPacket& packet, uint64_t& ts)
                                 //cout<<m_iSndCurrSeqNo<<endl;
 				m_iMonitorCurrSeqNo++;
 				packet.m_iSeqNo = m_iSndCurrSeqNo;
-				cout<<"send packet "<<packet.m_iSeqNo<<endl;
-//				cout<<"m_iSndCurrSeqNo"<<m_iSndCurrSeqNo<<endl;
+				//cout<<"send packet "<<packet.m_iSeqNo<<endl;
+
+				ofstream filecout("record.txt", ios_base::out | ios_base::in);
+				if(!filecout)
+    			{
+        			cout<<"can't open file!"<<endl;
+    			}
+				filecout.seekp(0,ios_base::end);  
+				filecout<<packet.m_iSeqNo<<endl;
+				filecout.close();
+				//cout<<"m_iSndCurrSeqNo"<<m_iSndCurrSeqNo<<endl;
 				// every 16 (0xF) packets, a packet pair is sent
 				if (0 == (packet.m_iSeqNo & 0xF))
 					probe = false;
